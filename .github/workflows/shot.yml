@@ -2,8 +2,8 @@ name: Auto Screenshot
 
 on:
   schedule:
-    - cron: '0 * * * *'   # 每小时整点自动运行
-  workflow_dispatch:      # 允许你随时手动点击运行
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -22,13 +22,15 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install playwright
+          pip install playwright requests
           playwright install chromium --with-deps
 
       - name: Run screenshot script
         env:
           SITE_USER: ${{ secrets.SITE_USER }}
           SITE_PASS: ${{ secrets.SITE_PASS }}
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          PUSHPLUS_TOPIC: ${{ secrets.PUSHPLUS_TOPIC }}
         run: python shoot.py
 
       - name: Commit and Push new screenshot
