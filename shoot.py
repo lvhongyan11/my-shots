@@ -12,7 +12,9 @@ with sync_playwright() as p:
     browser = p.chromium.launch(args=["--disable-blink-features=AutomationControlled"])
     context = browser.new_context(
         viewport={"width": 1920, "height": 1080},
-        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        # 👇 【关键修改】强制浏览器使用北京（上海）时区
+        timezone_id="Asia/Shanghai" 
     )
     page = context.new_page()
     
@@ -68,17 +70,15 @@ with sync_playwright() as p:
 
         print("开始截取最终数据图...")
         
-        # 1. 保存最新的图（用于快速查看）
+        # 1. 保存最新的图
         page.screenshot(path="latest.png", full_page=True)
         
-        # 2. 生成带时间戳的图（用于历史归档）
-        # 强制使用东八区（北京时间）
+        # 2. 生成带时间戳的历史图（北京时间）
         beijing_tz = datetime.timezone(datetime.timedelta(hours=8))
         now = datetime.datetime.now(beijing_tz)
         time_str = now.strftime("%Y%m%d_%H%M%S")
         filename = f"shots/{time_str}.png"
         
-        # 如果 shots 文件夹不存在，就自动创建一个
         if not os.path.exists("shots"):
             os.makedirs("shots")
             
