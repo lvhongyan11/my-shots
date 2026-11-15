@@ -51,7 +51,7 @@
                         const formattedTime = `${dateStr.slice(0,4)}-${dateStr.slice(4,6)}-${dateStr.slice(6,8)} ${timeStr.slice(0,2)}:${timeStr.slice(2,4)}`;
 
                         // 使用 jsDelivr 加速访问图片
-                        const imgUrl = `https://cdn.jsdelivr.net/gh/${user}/${repo}@main/shots/${file.name}`;
+                        const imgUrl = `./shots/${file.name}`;
 
                         const card = document.createElement('div');
                         card.className = 'card';
