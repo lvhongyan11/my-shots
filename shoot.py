@@ -2,7 +2,9 @@ import time
 import os
 import datetime
 import base64
+import io
 import requests
+from PIL import Image
 from playwright.sync_api import sync_playwright
 
 URL = "http://111.42.63.196:50000/smart-web/index.html"
@@ -17,26 +19,38 @@ def send_to_wechat(image_path):
         print("未配置 PushPlus Token，跳过推送。")
         return
         
-    print("正在将图片发送到微信群...")
-    # 把图片转成 Base64，直接塞进消息里，防止国内网络拦截
-    with open(image_path, "rb") as f:
-        img_base64 = base64.b64encode(f.read()).decode('utf-8')
-    
-    html_content = f'<img src="data:image/png;base64,{img_base64}" style="width:100%;" />'
-    
-    payload = {
-        "token": PUSHPLUS_TOKEN,
-        "title": "供热数据整点截图",
-        "content": html_content,
-        "template": "html"
-    }
-    
-    if PUSHPLUS_TOPIC:
-        payload["topic"] = PUSHPLUS_TOPIC
-
+    print("正在压缩图片并发送到微信群...")
     try:
+        # 1. 打开图片
+        img = Image.open(image_path)
+        
+        # 2. 限制最大宽度为 1080（手机上看足够清晰，且能大幅减小体积）
+        max_width = 1080
+        if img.width > max_width:
+            ratio = max_width / img.width
+            new_height = int(img.height * ratio)
+            img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+        
+        # 3. 转换成 JPEG 格式（比 PNG 小很多）
+        buffer = io.BytesIO()
+        img.convert('RGB').save(buffer, format="JPEG", quality=80)
+        img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        
+        html_content = f'<img src="data:image/jpeg;base64,{img_base64}" style="width:100%;" />'
+        
+        payload = {
+            "token": PUSHPLUS_TOKEN,
+            "title": "供热数据整点截图",
+            "content": html_content,
+            "template": "html"
+        }
+        
+        if PUSHPLUS_TOPIC:
+            payload["topic"] = PUSHPLUS_TOPIC
+
         res = requests.post("https://www.pushplus.plus/send", json=payload, timeout=30)
         print("微信推送结果:", res.text)
+        
     except Exception as e:
         print("微信推送失败:", e)
 
