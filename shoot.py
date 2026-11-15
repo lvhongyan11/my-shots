@@ -72,7 +72,9 @@ with sync_playwright() as p:
         page.screenshot(path="latest.png", full_page=True)
         
         # 2. 生成带时间戳的图（用于历史归档）
-        now = datetime.datetime.now()
+        # 强制使用东八区（北京时间）
+        beijing_tz = datetime.timezone(datetime.timedelta(hours=8))
+        now = datetime.datetime.now(beijing_tz)
         time_str = now.strftime("%Y%m%d_%H%M%S")
         filename = f"shots/{time_str}.png"
         
