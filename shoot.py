@@ -9,30 +9,37 @@ with sync_playwright() as p:
     page = context.new_page()
     
     print("正在打开网页...")
-    # 把超时时间从 60 秒延长到 90 秒，防止它没加载完
     page.goto(URL, timeout=90000)
     
-    print("等待页面加载...")
-    # 强行等 5 秒，让页面里的 JS 跑完
-    page.wait_for_timeout(5000)
+    print("等待初始页面加载...")
+    page.wait_for_timeout(5000) # 给基础页面5秒钟加载时间
     
     try:
-        print("寻找查询按钮...")
-        # 换一种更聪明的寻找方式，包容性更强
-        page.wait_for_selector("text=查询", timeout=20000)
-        print("点击查询...")
+        print("第 1 步：点击顶部【末端平衡】")
+        page.get_by_text("末端平衡", exact=True).first.click()
+        page.wait_for_timeout(2000) # 等2秒让页面响应
+        
+        print("第 2 步：点击左侧【户端实时】")
+        page.get_by_text("户端实时", exact=True).first.click()
+        page.wait_for_timeout(1000) # 等1秒让子菜单展开
+        
+        print("第 3 步：点击子菜单【室温KPI】")
+        page.get_by_text("室温KPI", exact=True).first.click()
+        page.wait_for_timeout(5000) # 这个页面数据多，给它5秒钟加载图表和表格
+        
+        print("第 4 步：寻找并点击【查询】按钮")
+        # 用 .last 是因为页面上可能有多个包含“查询”字样的元素，点最后一个通常最准
         page.get_by_text("查询", exact=True).last.click()
-        page.wait_for_timeout(3000) # 等数据刷新
+        page.wait_for_timeout(4000) # 点击查询后，等4秒让最新数据刷新
+        
+        print("开始截取最终数据图...")
+        page.screenshot(path="latest.png", full_page=True)
+        print("✅ 截图成功！已保存为 latest.png")
+        
     except Exception as e:
-        print(f"出错了！没找到查询按钮，原因：{e}")
-        print("正在保存诊断截图...")
-        # 如果找不到按钮，或者跳回了登录页，先截一张图！存为 debug.png
-        page.screenshot(path="debug.png", full_page=False)
-        print("诊断截图已保存，程序退出。")
+        print(f"❌ 出错了！原因：{e}")
+        print("正在保存诊断截图，看看卡在哪一步...")
+        page.screenshot(path="debug.png", full_page=True)
+        print("诊断截图已保存为 debug.png")
+    finally:
         browser.close()
-        exit(1) # 故意报错，让 GitHub 变红叉，提醒我们去看诊断图
-
-    print("开始截取最终数据图...")
-    page.screenshot(path="latest.png", full_page=True)
-    print("截图成功！")
-    browser.close()
