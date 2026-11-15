@@ -5,7 +5,6 @@ on:
     - cron: '0 * * * *'   # 每小时整点自动运行
   workflow_dispatch:      # 允许你随时手动点击运行
 
-# 👇 这里就是新增的权限，允许机器人往你的仓库里写文件
 permissions:
   contents: write
 
@@ -26,10 +25,10 @@ jobs:
           pip install playwright
           playwright install chromium --with-deps
 
-      - name: Restore auth state
-        run: echo '${{ secrets.SITE_STATE }}' > state.json
-
       - name: Run screenshot script
+        env:
+          SITE_USER: ${{ secrets.SITE_USER }}
+          SITE_PASS: ${{ secrets.SITE_PASS }}
         run: python shoot.py
 
       - name: Commit and Push new screenshot
