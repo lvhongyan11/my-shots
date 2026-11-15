@@ -1,5 +1,6 @@
 import time
 import os
+import datetime
 from playwright.sync_api import sync_playwright
 
 URL = "http://111.42.63.196:50000/smart-web/index.html"
@@ -8,6 +9,7 @@ USERNAME = os.environ.get("SITE_USER")
 PASSWORD = os.environ.get("SITE_PASS")
 
 with sync_playwright() as p:
+    # 伪装成真实的浏览器
     browser = p.chromium.launch(args=["--disable-blink-features=AutomationControlled"])
     context = browser.new_context(
         viewport={"width": 1920, "height": 1080},
@@ -56,9 +58,8 @@ with sync_playwright() as p:
         
         print("第 3 步：点击子菜单【室温KPI】")
         page.get_by_text("室温KPI").first.click(timeout=20000)
-        page.wait_for_timeout(8000) # 给足8秒让表格完全渲染
+        page.wait_for_timeout(8000)
         
-        # 【关键更新】用容错的方式点击查询，不管点没点到，都不崩溃
         try:
             print("尝试点击【查询】按钮...")
             page.get_by_text("查询").last.click(timeout=5000)
@@ -67,8 +68,22 @@ with sync_playwright() as p:
             print("点击查询可能失败或不需要点，无视它，直接截图。")
 
         print("开始截取最终数据图...")
+        
+        # 1. 保存最新的一张，方便直接看
         page.screenshot(path="latest.png", full_page=True)
-        print("✅ 截图成功！已保存为 latest.png")
+        
+        # 2. 生成历史文件夹（如果没有的话）
+        if not os.path.exists("shots"):
+            os.makedirs("shots")
+            
+        # 3. 按当前时间生成文件名（例如：20231115_143000.png）
+        now = datetime.datetime.now()
+        time_str = now.strftime("%Y%m%d_%H%M%S")
+        history_filename = f"shots/{time_str}.png"
+        
+        # 4. 保存历史截图
+        page.screenshot(path=history_filename, full_page=True)
+        print(f"✅ 截图成功！已保存为 latest.png 和 {history_filename}")
         
     except Exception as e:
         print(f"❌ 操作失败，原因：{e}")
