@@ -10,31 +10,29 @@ with sync_playwright() as p:
     
     print("正在打开网页...")
     page.goto(URL, timeout=90000)
-    
-    print("等待初始页面加载...")
-    page.wait_for_timeout(6000) # 给主页足够的加载时间
+    page.wait_for_timeout(8000) # 给足8秒加载时间
+
+    # 【关键】不管三七二十一，先在仓库里存一张图，看看它到底看到了什么
+    page.screenshot(path="debug.png", full_page=True)
+    print("已保存初始页面截图 debug.png")
 
     try:
         print("第 1 步：点击顶部【末端平衡】")
-        # 等待“末端平衡”可见后再点击
-        page.get_by_text("末端平衡", exact=True).first.wait_for(state="visible", timeout=15000)
-        page.get_by_text("末端平衡", exact=True).first.click()
-        page.wait_for_timeout(3000) # 点击后等待页面响应
+        # 去掉了 exact=True，容错率更高，也不容易超时
+        page.get_by_text("末端平衡").first.click(timeout=20000)
+        page.wait_for_timeout(2000) 
         
         print("第 2 步：点击左侧【户端实时】")
-        page.get_by_text("户端实时", exact=True).first.wait_for(state="visible", timeout=15000)
-        page.get_by_text("户端实时", exact=True).first.click()
-        page.wait_for_timeout(2000) # 等子菜单展开
+        page.get_by_text("户端实时").first.click(timeout=20000)
+        page.wait_for_timeout(1500) 
         
         print("第 3 步：点击子菜单【室温KPI】")
-        page.get_by_text("室温KPI", exact=True).first.wait_for(state="visible", timeout=15000)
-        page.get_by_text("室温KPI", exact=True).first.click()
-        page.wait_for_timeout(6000) # 这个页面数据较多，等待加载图表和表格
+        page.get_by_text("室温KPI").first.click(timeout=20000)
+        page.wait_for_timeout(6000) 
         
         print("第 4 步：寻找并点击【查询】按钮")
-        page.get_by_text("查询", exact=True).last.wait_for(state="visible", timeout=15000)
-        page.get_by_text("查询", exact=True).last.click()
-        page.wait_for_timeout(5000) # 等待最新数据刷新
+        page.get_by_text("查询").last.click(timeout=20000)
+        page.wait_for_timeout(5000) 
         
         print("开始截取最终数据图...")
         page.screenshot(path="latest.png", full_page=True)
@@ -42,8 +40,5 @@ with sync_playwright() as p:
         
     except Exception as e:
         print(f"❌ 操作失败，原因：{e}")
-        print("正在保存诊断截图...")
-        page.screenshot(path="debug.png", full_page=True)
-        print("诊断截图已保存为 debug.png")
     finally:
         browser.close()
