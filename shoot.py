@@ -9,7 +9,6 @@ USERNAME = os.environ.get("SITE_USER")
 PASSWORD = os.environ.get("SITE_PASS")
 
 with sync_playwright() as p:
-    # 伪装成真实的浏览器
     browser = p.chromium.launch(args=["--disable-blink-features=AutomationControlled"])
     context = browser.new_context(
         viewport={"width": 1920, "height": 1080},
@@ -58,7 +57,7 @@ with sync_playwright() as p:
         
         print("第 3 步：点击子菜单【室温KPI】")
         page.get_by_text("室温KPI").first.click(timeout=20000)
-        page.wait_for_timeout(8000)
+        page.wait_for_timeout(8000) 
         
         try:
             print("尝试点击【查询】按钮...")
@@ -69,21 +68,20 @@ with sync_playwright() as p:
 
         print("开始截取最终数据图...")
         
-        # 1. 保存最新的一张，方便直接看
+        # 1. 保存最新的图（用于快速查看）
         page.screenshot(path="latest.png", full_page=True)
         
-        # 2. 生成历史文件夹（如果没有的话）
+        # 2. 生成带时间戳的图（用于历史归档）
+        now = datetime.datetime.now()
+        time_str = now.strftime("%Y%m%d_%H%M%S")
+        filename = f"shots/{time_str}.png"
+        
+        # 如果 shots 文件夹不存在，就自动创建一个
         if not os.path.exists("shots"):
             os.makedirs("shots")
             
-        # 3. 按当前时间生成文件名（例如：20231115_143000.png）
-        now = datetime.datetime.now()
-        time_str = now.strftime("%Y%m%d_%H%M%S")
-        history_filename = f"shots/{time_str}.png"
-        
-        # 4. 保存历史截图
-        page.screenshot(path=history_filename, full_page=True)
-        print(f"✅ 截图成功！已保存为 latest.png 和 {history_filename}")
+        page.screenshot(path=filename, full_page=True)
+        print(f"✅ 截图成功！已保存为 latest.png 以及历史图片 {filename}")
         
     except Exception as e:
         print(f"❌ 操作失败，原因：{e}")
