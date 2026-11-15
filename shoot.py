@@ -8,36 +8,50 @@ USERNAME = os.environ.get("SITE_USER")
 PASSWORD = os.environ.get("SITE_PASS")
 
 with sync_playwright() as p:
-    browser = p.chromium.launch()
-    context = browser.new_context(viewport={"width": 1920, "height": 1080})
+    # 伪装成真实的 Windows 谷歌浏览器，防止被系统识别为机器人
+    browser = p.chromium.launch(args=["--disable-blink-features=AutomationControlled"])
+    context = browser.new_context(
+        viewport={"width": 1920, "height": 1080},
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    )
     page = context.new_page()
     
     print("正在打开网页...")
     page.goto(URL, timeout=90000)
-    page.wait_for_timeout(5000) 
+    page.wait_for_timeout(6000) 
 
     try:
         print("检查是否需要登录...")
         if page.locator("input[type='password']").count() > 0:
-            print("发现登录页面，正在自动输入账号密码...")
+            print("发现登录页面，正在模拟键盘输入...")
             
-            # 使用更精准的 input 索引来输入（第一个是账号，第二个是密码）
-            inputs = page.locator("input")
-            inputs.nth(0).fill(USERNAME)
-            inputs.nth(1).fill(PASSWORD)
-            page.wait_for_timeout(1500)
+            # 精准定位账号框和密码框
+            pwd_input = page.locator("input[type='password']").first
+            user_input = page.locator("input[type='text']").first
+            
+            # 1. 输入账号（先全选删掉自带的，再模拟人类敲键盘，间隔0.1秒）
+            user_input.click()
+            user_input.press("Control+A")
+            user_input.press("Backspace")
+            user_input.press_sequentially(USERNAME, delay=100)
+            page.wait_for_timeout(500)
+            
+            # 2. 输入密码
+            pwd_input.click()
+            pwd_input.press_sequentially(PASSWORD, delay=100)
+            page.wait_for_timeout(1000)
             
             print("尝试点击登录按钮...")
-            # 方法1：尝试点击按钮
-            try:
-                page.locator("button:has-text('登录')").first.click(timeout=5000, force=True)
-            except:
-                print("点击按钮失败，尝试按回车键...")
-                # 方法2：如果按钮点不动，直接在密码框按回车键（最管用）
-                inputs.nth(1).press("Enter")
+            # 尝试寻找包含“登录”字样的元素并点击
+            login_btn = page.locator("text='登录'").last
+            if login_btn.is_visible():
+                login_btn.click(force=True)
+            else:
+                # 如果找不到，直接在密码框按回车
+                pwd_input.press("Enter")
 
             print("已提交登录，等待系统加载...")
-            page.wait_for_timeout(8000) # 给8秒时间让页面跳转加载
+            page.wait_for_timeout(10000) # 给足10秒时间让它加载
             
         print("第 1 步：点击顶部【末端平衡】")
         page.get_by_text("末端平衡").first.click(timeout=20000)
