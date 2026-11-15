@@ -1,20 +1,51 @@
 import time
 import os
 import datetime
+import base64
+import requests
 from playwright.sync_api import sync_playwright
 
 URL = "http://111.42.63.196:50000/smart-web/index.html"
 
 USERNAME = os.environ.get("SITE_USER")
 PASSWORD = os.environ.get("SITE_PASS")
+PUSHPLUS_TOKEN = os.environ.get("PUSHPLUS_TOKEN")
+PUSHPLUS_TOPIC = os.environ.get("PUSHPLUS_TOPIC")
+
+def send_to_wechat(image_path):
+    if not PUSHPLUS_TOKEN:
+        print("未配置 PushPlus Token，跳过推送。")
+        return
+        
+    print("正在将图片发送到微信群...")
+    # 把图片转成 Base64，直接塞进消息里，防止国内网络拦截
+    with open(image_path, "rb") as f:
+        img_base64 = base64.b64encode(f.read()).decode('utf-8')
+    
+    html_content = f'<img src="data:image/png;base64,{img_base64}" style="width:100%;" />'
+    
+    payload = {
+        "token": PUSHPLUS_TOKEN,
+        "title": "供热数据整点截图",
+        "content": html_content,
+        "template": "html"
+    }
+    
+    if PUSHPLUS_TOPIC:
+        payload["topic"] = PUSHPLUS_TOPIC
+
+    try:
+        res = requests.post("https://www.pushplus.plus/send", json=payload, timeout=30)
+        print("微信推送结果:", res.text)
+    except Exception as e:
+        print("微信推送失败:", e)
 
 with sync_playwright() as p:
     browser = p.chromium.launch(args=["--disable-blink-features=AutomationControlled"])
     context = browser.new_context(
         viewport={"width": 1920, "height": 1080},
         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        # 👇 【关键修改】强制浏览器使用北京（上海）时区
-        timezone_id="Asia/Shanghai" 
+        timezone_id="Asia/Shanghai"
     )
     page = context.new_page()
     
@@ -70,10 +101,8 @@ with sync_playwright() as p:
 
         print("开始截取最终数据图...")
         
-        # 1. 保存最新的图
         page.screenshot(path="latest.png", full_page=True)
         
-        # 2. 生成带时间戳的历史图（北京时间）
         beijing_tz = datetime.timezone(datetime.timedelta(hours=8))
         now = datetime.datetime.now(beijing_tz)
         time_str = now.strftime("%Y%m%d_%H%M%S")
@@ -84,6 +113,9 @@ with sync_playwright() as p:
             
         page.screenshot(path=filename, full_page=True)
         print(f"✅ 截图成功！已保存为 latest.png 以及历史图片 {filename}")
+        
+        # 发送到微信
+        send_to_wechat("latest.png")
         
     except Exception as e:
         print(f"❌ 操作失败，原因：{e}")
