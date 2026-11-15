@@ -1,0 +1,37 @@
+name: Auto Screenshot
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # 每小时整点自动运行
+  workflow_dispatch:      # 允许你随时手动点击运行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install playwright
+          playwright install chromium --with-deps
+
+      - name: Restore auth state
+        run: echo '${{ secrets.SITE_STATE }}' > state.json
+
+      - name: Run screenshot script
+        run: python shoot.py
+
+      - name: Commit and Push new screenshot
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add latest.png
+          git commit -m "Update screenshot [skip ci]" || echo "No changes"
+          git push
